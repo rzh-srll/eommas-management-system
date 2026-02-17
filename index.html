@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EOMMA'S Management System</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jsPDF for PDFs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <!-- LOGIN AND CREATE ACCOUNT CONTAINER -->
+  <div class="login-container active" role="main" aria-label="Login container">
+    <div class="tab-switcher" role="tablist">
+      <button id="adminTab" class="active" type="button" aria-pressed="true" role="tab" aria-controls="adminForm">Admin</button>
+      <button id="employeeTab" type="button" aria-pressed="false" role="tab" aria-controls="employeeForm">Employee</button>
+    </div>
+
+    <!-- ADMIN LOGIN FORM -->
+    <form id="adminForm" class="admin-login active" aria-hidden="false" aria-labelledby="adminTab" novalidate>
+      <h2>Admin Login</h2>
+      <label for="adminUsername">Username</label>
+      <input type="text" id="adminUsername" name="adminUsername" placeholder="Enter Username" autocomplete="username" required />
+      <label for="adminPassword">Password</label>
+      <input type="password" id="adminPassword" name="adminPassword" placeholder="" autocomplete="current-password" required />
+      <button type="submit" class="login-button">Login</button>
+    </form>
+
+    <!-- EMPLOYEE LOGIN FORM -->
+    <form id="employeeForm" class="employee-login" aria-hidden="true" aria-labelledby="employeeTab" novalidate>
+      <h2>Employee Login</h2>
+      <label for="employeeUsername">Username</label>
+      <input type="text" id="employeeUsername" name="employeeUsername" placeholder="Enter Username" autocomplete="username" required />
+      <label for="employeePassword">Password</label>
+      <input type="password" id="employeePassword" name="employeePassword" placeholder="" autocomplete="current-password" required />
+      <button type="submit" class="login-button">Login</button>
+      <a id="openCreateAccount" class="create-account" tabindex="0">Create an Account</a>
+    </form>
+  </div>
+
+  <!-- CREATE EMPLOYEE ACCOUNT MODAL -->
+  <div id="createAccountModalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="createAccountModalTitle" aria-hidden="true">
+    <div class="modal">
+      <button class="close-btn" aria-label="Close create account form">&times;</button>
+      <h3 id="createAccountModalTitle">Create Employee Account</h3>
+      <form id="createAccountForm" novalidate>
+        <label for="fullName">Full Name</label>
+        <input type="text" id="fullName" name="fullName" placeholder="Enter Full Name" required />
+        <label for="newUsername">Username</label>
+        <input type="text" id="newUsername" name="newUsername" placeholder="Enter Username" required />
+        <label for="newPassword">Password</label>
+        <input type="password" id="newPassword" name="newPassword" placeholder="Enter Password" required />
+        <label for="position">Position</label>
+        <input type="text" id="position" name="position" placeholder="Enter Position" required />
+        <label for="hourlyRate">Hourly Rate (PHP)</label>
+        <input type="number" min="0" step="0.01" id="hourlyRate" name="hourlyRate" placeholder="Enter Hourly Rate" required />
+        <button type="submit" class="create-account-btn">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADMIN AUTHENTICATION MODAL -->
+  <div id="adminAuthModalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="adminAuthModalTitle" aria-hidden="true">
+    <div class="modal">
+      <button class="close-btn" aria-label="Close admin authentication form">&times;</button>
+      <h3 id="adminAuthModalTitle">Admin Authentication Required</h3>
+      <p>Please enter the admin password to create a new employee account.</p>
+      <form id="adminAuthForm" novalidate>
+        <label for="adminAuthPassword">Admin Password</label>
+        <input type="password" id="adminAuthPassword" name="adminAuthPassword" placeholder="" autocomplete="current-password" required />
+        <div class="admin-auth-buttons">
+          <button type="button" class="cancel-btn">Cancel</button>
+          <button type="submit" class="verify-btn">Verify &amp; Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD CONTAINER (for employee time clock) -->
+  <div class="dashboard-container" role="main" aria-label="User dashboard">
+    <div class="dashboard-header">
+      <div class="welcome-text"></div>
+      <button class="logout-button" aria-label="Logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-log-out" viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
+    </div>
+    <div class="time-card" aria-live="polite" aria-atomic="true">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#6f49b2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="clock-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      <div class="title">Time Clock</div>
+      <div class="time" id="currentTime" aria-label="Current time"></div>
+      <div class="status-text" id="statusText"></div>
+      <div class="buttons-wrap" style="display:flex;justify-content:center;gap:20px;">
+        <button class="clock-button clock-in" id="btnClockIn" aria-disabled="false" aria-label="Clock In">⚡ Clock In</button>
+        <button class="clock-button clock-out" id="btnClockOut" disabled aria-disabled="true" aria-label="Clock Out">↪ Clock Out</button>
+      </div>
+    </div>
+  </div>
+
+  <header style="display: none;">
+    <div id="header-home">
+      <div style="display:flex; flex-direction: column; line-height: 1; user-select:none;">
+        <div style="color:#6c59b8; font-weight:900; font-size:1rem;">EOMMA'S</div>
+        <div style="color:#6c59b8; font-weight:400; font-size:0.8rem;">Management System</div>
+      </div>
+    </div>
+    <div id="header-page" style="display: none;">
+      <div style="display: flex; flex-direction: column; line-height: 1; user-select:none;">
+        <div style="color:#6c59b8; font-weight:900; font-size:1.3rem;">EOMMA'S</div>
+        <div style="color: rgba(97, 86, 168, 0.64); font-weight: 400; font-size: 0.8rem;">Management System</div>
+      </div>
+      <div id="page-title" style="color:#4b3d72; font-weight:900; font-size:1rem; letter-spacing:1.8px; text-transform: uppercase; user-select:none;">INVENTORY</div>
+      <div style="width: 40px;"></div>
+    </div>
+    <div>
+      <div id="hamburger-btn" class="hamburger" tabindex="0" aria-label="Toggle navigation menu" role="button">
+        <div></div><div></div><div></div>
+      </div>
+      <nav id="nav-dropdown" class="dropdown-menu" role="menu" aria-label="Main navigation">
+        <h4>Navigation</h4>
+        <ul class="dropdown-list" style="padding-left:0; margin:0;">
+          <li data-page="home" tabindex="0" role="menuitem" aria-current="false">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4H9v4a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z"/></svg> Home
+          </li>
+          <li data-page="inventory" tabindex="0" role="menuitem" aria-current="false">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> Inventory
+          </li>
+          <li data-page="payroll" tabindex="0" role="menuitem" aria-current="false">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M7 21v-2a4 4 0 0 1 3-3.87"></path><circle cx="12" cy="7" r="4"></circle></svg> Payroll
+          </li>
+          <li data-page="incomeExpense" tabindex="0" role="menuitem" aria-current="false">
+            <svg viewBox="0 0 24 24"><path d="M12 2v20"></path><path d="M17 7H9.5a3.5 3.5 0 0 0 0 7H16"></path></svg> Income/Expense
+          </li>
+          <li data-page="logout" tabindex="0" role="menuitem" class="logout" style="color:#dd4b39; border-top:1px solid #eee; margin-top:8px; padding-top:8px;">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Log-Out
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main style="display: none;">
+    <section id="homepage-main">
+      <h1>Welcome to <span class="black-part">EOMMA'S</span> Management System</h1>
+      <p>Click the cards below to see more details.</p>
+      <div class="cards">
+        <div class="card" data-page="inventory" tabindex="0" role="button" aria-label="Inventory details">
+          <div class="summary" id="summary-inventory">0</div>
+          INVENTORY
+        </div>
+        <div class="card" data-page="payroll" tabindex="0" role="button" aria-label="Payroll details">
+          <div class="summary" id="summary-payroll">PHP 0.00</div>
+          PAYROLL
+        </div>
+        <div class="card" data-page="incomeExpense" tabindex="0" role="button" aria-label="Income and expense details">
+          <div class="summary" id="summary-income-expense">₱0.00</div>
+          INCOME / EXPENSE
+        </div>
+      </div>
+    </section>
+    <section id="page-main-container" style="display:none;">
+            <!-- Inventory Page -->
+      <div id="inventory-page" style="display:none;">
+        <div id="headerContainer">
+          <h2>Inventory Management</h2>
+          <input type="date" id="datePicker">
+          <button id="downloadBtn">Download PDF</button>
+        </div>
+        <table id="inventoryTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Price (PHP)</th>
+              <th>Quantity Stock</th>
+              <th>Quantity Reorder</th>
+              <th>Inventory Value</th>
+              <th>Quantity Used</th>
+              <th>Ending</th>
+              <th>Need Reorder?</th>
+              <th>Remarks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button id="addRowBtn">Add Row</button>
+      </div>
+
+      <!-- Payroll Page -->
+      <div id="payroll-page" style="display:none;">
+        <div class="bg-white shadow rounded-lg p-6">
+          <h2 class="text-2xl font-bold mb-4">Payroll Management</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="dashboard-card bg-blue-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Active Employees</h3>
+              <p class="text-2xl font-bold" id="active-employees">0</p>
+            </div>
+            <div class="dashboard-card bg-green-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Total Hours Today</h3>
+              <p class="text-2xl font-bold" id="total-hours">0.0</p>
+            </div>
+            <div class="dashboard-card bg-yellow-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Payroll Due Today</h3>
+              <p class="text-2xl font-bold" id="payroll-due">PHP 0.00</p>
+            </div>
+            <div class="dashboard-card bg-purple-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Total Employees</h3>
+              <p class="text-2xl font-bold" id="total-employees-payroll">0</p>
+            </div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Clock In/Out</h3>
+            <div class="flex items-center space-x-4">
+              <select id="employee-select" class="border border-gray-300 rounded px-3 py-2">
+                <option value="">-- Select Employee --</option>
+              </select>
+              <button id="clock-in-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Clock In</button>
+              <button id="clock-out-btn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Clock Out</button>
+            </div>
+            <div id="today-status" class="mt-4 p-4 bg-gray-100 rounded"></div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Employee Management</h3>
+            <button id="add-employee-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">Add Employee</button>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hourly Rate</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="employee-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Activity Log</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Payroll Calculation</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="pay-period-start" class="block text-sm font-medium text-gray-700">Pay Period Start</label>
+                <input type="date" id="pay-period-start" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+              </div>
+              <div>
+                <label for="pay-period-end" class="block text-sm font-medium text-gray-700">Pay Period End</label>
+                <input type="date" id="pay-period-end" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+              </div>
+            </div>
+            <button id="calculate-payroll-btn" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Calculate Payroll</button>
+            <div id="payroll-results" class="mt-4 hidden">
+              <h4 class="text-lg font-semibold">Payroll Summary</h4>
+              <p>Regular Hours: <span id="regular-hours">0.0</span></p>
+              <p>Overtime Hours: <span id="overtime-hours">0.0</span></p>
+              <p>Total Employees: <span id="total-employees-payroll">0</span></p>
+              <p>Regular Pay: <span id="regular-pay">PHP 0.00</span></p>
+              <p>Overtime Pay: <span id="overtime-pay">PHP 0.00</span></p>
+              <p>Total Pay: <span id="total-pay">PHP 0.00</span></p>
+              <button id="print-payroll-btn" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Print Payroll</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Income/Expense Page -->
+      <div id="income-expense-page" style="display:none;">
+        <div class="content">
+          <h2 class="text-2xl font-bold mb-4">Income and Expense Management</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="bg-green-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Net Income</h3>
+              <p class="text-2xl font-bold" id="net-income">₱0.00</p>
+            </div>
+            <div class="bg-red-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Net Expense</h3>
+              <p class="text-2xl font-bold" id="net-expense">₱0.00</p>
+            </div>
+            <div class="bg-blue-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Net Profit</h3>
+              <p class="text-2xl font-bold" id="net-profit">₱0.00</p>
+            </div>
+            <div class="bg-yellow-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">Profit Margin</h3>
+              <p class="text-2xl font-bold" id="profit-margin">0.00%</p>
+            </div>
+            <div class="bg-purple-100 p-4 rounded-lg">
+              <h3 class="text-lg font-semibold">VAT Collected</h3>
+              <p class="text-2xl font-bold" id="vat-collected">₱0.00</p>
+            </div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Add New Entry</h3>
+            <form id="entry-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="entry-date" class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" id="entry-date" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2" required>
+              </div>
+              <div>
+                <label for="entry-type" class="block text-sm font-medium text-gray-700">Type</label>
+                <select id="entry-type" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2" required>
+                  <option value="">Select Type</option>
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <div>
+                <label for="entry-category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select id="entry-category" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2" required>
+                  <option value="">Select Category</option>
+                </select>
+                <div id="category-input-wrapper" class="hidden mt-2">
+                  <input type="text" id="entry-category-input" class="block w-full border border-gray-300 rounded px-3 py-2" placeholder="Enter custom category">
+                </div>
+              </div>
+              <div>
+                <label for="entry-amount" class="block text-sm font-medium text-gray-700">Amount (PHP)</label>
+                <input type="number" id="entry-amount" min="0" step="0.01" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2" required>
+              </div>
+              <div>
+                <label for="entry-vat-tax" class="block text-sm font-medium text-gray-700">VAT / Tax (PHP)</label>
+                <input type="number" id="entry-vat-tax" min="0" step="0.01" value="0.00" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+              </div>
+              <div class="md:col-span-2">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add Entry</button>
+              </div>
+            </form>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Filter Records</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label for="period-select" class="block text-sm font-medium text-gray-700">Period</label>
+                <select id="period-select" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div>
+                <label for="date-select" class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" id="date-select" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+              </div>
+              <div>
+                <label for="month-select" class="block text-sm font-medium text-gray-700">Month</label>
+                <select id="month-select" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2">
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+              <div>
+                <label for="year-select" class="block text-sm font-medium text-gray-700">Year</label>
+                <input type="number" id="year-select" class="mt-1 block w-full border border-gray-300 rounded px-3 py-2" min="2000" max="2100">
+              </div>
+            </div>
+          </div>
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-2">Records</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VAT / Tax</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="records-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <button id="download-button" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Download PDF Report</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Common variables and functions (login, navigation, etc.)
+    let users = JSON.parse(localStorage.getItem('employeeUsers')) || [];
+    let loggedInUser = null;
+    let clockedIn = JSON.parse(localStorage.getItem('clockedIn')) || false;
+
+    // Define missing variables
+    const headerHome = document.getElementById('header-home');
+    const headerPage = document.getElementById('header-page');
+    const loginContainer = document.querySelector('.login-container');
+
+    // Tab switch logic
+    const adminTab = document.getElementById("adminTab");
+    const employeeTab = document.getElementById("employeeTab");
+    const adminForm = document.getElementById("adminForm");
+    const employeeForm = document.getElementById("employeeForm");
+
+    adminTab.addEventListener("click", () => {
+      adminTab.classList.add("active");
+      adminTab.setAttribute("aria-pressed", "true");
+      employeeTab.classList.remove("active");
+      employeeTab.setAttribute("aria-pressed", "false");
+      adminForm.classList.add("active");
+      adminForm.setAttribute("aria-hidden", "false");
+      employeeForm.classList.remove("active");
+      employeeForm.setAttribute("aria-hidden", "true");
+    });
+
+    employeeTab.addEventListener("click", () => {
+      employeeTab.classList.add("active");
+      employeeTab.setAttribute("aria-pressed", "true");
+      adminTab.classList.remove("active");
+      adminTab.setAttribute("aria-pressed", "false");
+      employeeForm.classList.add("active");
+      employeeForm.setAttribute("aria-hidden", "false");
+      adminForm.classList.remove("active");
+      adminForm.setAttribute("aria-hidden", "true");
+    });
+
+    // Admin login
+    adminForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const username = adminForm.adminUsername.value.trim();
+      const password = adminForm.adminPassword.value;
+      if (username === "admin" && password === "ADMINpass") {
+        document.querySelector(".login-container").classList.remove("active");
+        document.body.classList.add("management-active");
+        document.querySelector("header").style.display = "flex";
+        document.querySelector("main").style.display = "block";
+        setPage('home');
+        adminForm.reset();
+      } else {
+        alert("Invalid username or password for Admin.");
+      }
+    });
+
+        // Employee login
+    employeeForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const username = employeeForm.employeeUsername.value.trim();
+      const password = employeeForm.employeePassword.value;
+      const user = users.find(u => u.username === username && u.password === password);
+      if (user) {
+        loggedInUser = user;
+        employeeForm.reset();
+        showDashboard();
+      } else {
+        alert("Invalid username or password for Employee.");
+      }
+    });
+
+    // Create account modal logic
+    const openCreateAccount = document.getElementById('openCreateAccount');
+    const createAccountModalOverlay = document.getElementById('createAccountModalOverlay');
+    const createAccountForm = document.getElementById('createAccountForm');
+    const adminAuthModalOverlay = document.getElementById('adminAuthModalOverlay');
+    const adminAuthForm = document.getElementById('adminAuthForm');
+
+    openCreateAccount.addEventListener('click', (e) => {
+      e.preventDefault();
+      createAccountModalOverlay.classList.add('active');
+      createAccountModalOverlay.setAttribute('aria-hidden', 'false');
+    });
+
+    createAccountModalOverlay.querySelector('.close-btn').addEventListener('click', () => {
+      createAccountModalOverlay.classList.remove('active');
+      createAccountModalOverlay.setAttribute('aria-hidden', 'true');
+      createAccountForm.reset();
+    });
+
+    createAccountForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Open admin auth modal
+      createAccountModalOverlay.classList.remove('active');
+      adminAuthModalOverlay.classList.add('active');
+      adminAuthModalOverlay.setAttribute('aria-hidden', 'false');
+    });
+
+    adminAuthModalOverlay.querySelector('.close-btn').addEventListener('click', () => {
+      adminAuthModalOverlay.classList.remove('active');
+      adminAuthModalOverlay.setAttribute('aria-hidden', 'true');
+      adminAuthForm.reset();
+    });
+
+    adminAuthForm.querySelector('.cancel-btn').addEventListener('click', () => {
+      adminAuthModalOverlay.classList.remove('active');
+      adminAuthModalOverlay.setAttribute('aria-hidden', 'true');
+      adminAuthForm.reset();
+      createAccountModalOverlay.classList.add('active');
+    });
+
+    adminAuthForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const adminPassword = adminAuthForm.adminAuthPassword.value;
+      if (adminPassword === 'ADMINpass') {
+        // Create the account
+        const fullName = createAccountForm.fullName.value.trim();
+        const newUsername = createAccountForm.newUsername.value.trim();
+        const newPassword = createAccountForm.newPassword.value;
+        const position = createAccountForm.position.value.trim();
+        const hourlyRate = parseFloat(createAccountForm.hourlyRate.value);
+        if (!fullName || !newUsername || !newPassword || !position || isNaN(hourlyRate) || hourlyRate < 0) {
+          alert('Please fill all fields correctly.');
+          return;
+        }
+        if (users.some(u => u.username === newUsername)) {
+          alert('Username already exists.');
+          return;
+        }
+        users.push({ fullName, username: newUsername, password: newPassword, position, hourlyRate });
+        localStorage.setItem('employeeUsers', JSON.stringify(users));
+        alert('Employee account created successfully.');
+        adminAuthModalOverlay.classList.remove('active');
+        adminAuthForm.reset();
+        createAccountForm.reset();
+      } else {
+        alert('Invalid admin password.');
+      }
+    });
+
+    // Dashboard functions
+    function showDashboard() {
+      document.querySelector('.login-container').classList.remove('active');
+      document.querySelector('.dashboard-container').classList.add('active');
+      document.querySelector('.welcome-text').textContent = `Welcome, ${loggedInUser.fullName}!`;
+      updateClock();
+      const interval = setInterval(updateClock, 1000);
+      // Store interval for cleanup if needed
+      window.clockInterval = interval;
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('statusText').textContent = clockedIn ? 'Clocked In' : 'Clocked Out';
+      document.getElementById('btnClockIn').disabled = clockedIn;
+      document.getElementById('btnClockOut').disabled = !clockedIn;
+    }
+
+    document.getElementById('btnClockIn').addEventListener('click', () => {
+      if (!clockedIn) {
+        clockedIn = true;
+        localStorage.setItem('clockedIn', JSON.stringify(clockedIn));
+        updateClock();
+        alert('Clocked In!');
+      }
+    });
+
+    document.getElementById('btnClockOut').addEventListener('click', () => {
+      if (clockedIn) {
+        clockedIn = false;
+        localStorage.setItem('clockedIn', JSON.stringify(clockedIn));
+        updateClock();
+        alert('Clocked Out!');
+      }
+    });
+
+    document.querySelector('.logout-button').addEventListener('click', () => {
+      loggedInUser = null;
+      document.querySelector('.dashboard-container').classList.remove('active');
+      document.querySelector('.login-container').classList.add('active');
+      clearInterval(window.clockInterval);
+    });
+
+    // Navigation and page switching
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const navDropdown = document.getElementById('nav-dropdown');
+    const navItems = navDropdown.querySelectorAll('li[data-page]');
+    const homepageMain = document.getElementById('homepage-main');
+    const pageMainContainer = document.getElementById('page-main-container');
+    const pageTitleCenter = document.getElementById('page-title');
+    const cards = document.querySelectorAll('.card');
+
+    function setPage(page) {
+      navDropdown.classList.remove('active');
+      navItems.forEach(i => {
+        if (i.dataset.page === page) {
+          i.classList.add('active');
+          i.setAttribute('aria-current', 'page');
+        } else {
+          i.classList.remove('active');
+          i.removeAttribute('aria-current');
+        }
+      });
+
+      // Hide all pages
+      document.querySelectorAll('#page-main-container > div').forEach(div => div.style.display = 'none');
+
+      if (page === 'home') {
+        homepageMain.style.display = 'block';
+        pageMainContainer.style.display = 'none';
+        headerHome.style.display = 'flex';
+        headerPage.style.display = 'none';
+        updateHomepageSummaries();
+      } else {
+        homepageMain.style.display = 'none';
+        pageMainContainer.style.display = 'block';
+        headerHome.style.display = 'none';
+        headerPage.style.display = 'flex';
+        pageTitleCenter.textContent = page === 'incomeExpense' ? 'INCOME/EXPENSE' : page.toUpperCase();
+
+        // Show specific page
+        const pageDiv = document.getElementById(`${page}-page`);
+        if (pageDiv) pageDiv.style.display = 'block';
+
+        if (page === 'inventory') {
+          initializeInventory();
+        } else if (page === 'payroll') {
+          initializePayroll();
+        } else if (page === 'incomeExpense') {
+          initializeIncomeExpense();
+        }
+      }
+    }
+
+    // Toggle navigation dropdown
+    hamburgerBtn.addEventListener('click', () => {
+      navDropdown.classList.toggle('active');
+    });
+    hamburgerBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navDropdown.classList.toggle('active');
+      }
+    });
+
+    // Clicking nav items changes page
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.dataset.page === 'logout') {
+          document.body.classList.remove("management-active");
+          document.querySelector("header").style.display = "none";
+          document.querySelector("main").style.display = "none";
+          loginContainer.classList.add("active");
+        } else {
+          setPage(item.dataset.page);
+        }
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (item.dataset.page === 'logout') {
+            document.body.classList.remove("management-active");
+            document.querySelector("header").style.display = "none";
+            document.querySelector("main").style.display = "none";
+            loginContainer.classList.add("active");
+          } else {
+            setPage(item.dataset.page);
+          }
+        }
+      });
+    });
+
+    // Cards clickable on homepage to switch pages
+    cards.forEach(card => {
+      card.addEventListener('click', () => {
+        setPage(card.dataset.page);
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setPage(card.dataset.page);
+        }
+      });
+    });
+
+    // Close nav dropdown if click outside
+    document.addEventListener('click', e => {
+      if (!navDropdown.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+        navDropdown.classList.remove('active');
+      }
+    });
+
+    // Update homepage summaries
+    function updateHomepageSummaries() {
+      // Inventory: sum total items in stock
+      const inventoryRows = document.querySelectorAll('#inventoryTable tbody tr');
+      let totalStock = 0;
+      inventoryRows.forEach(row => {
+        const quantityStock = parseInt(row.cells[3].querySelector('input').value) || 0;
+        totalStock += quantityStock;
+      });
+      document.getElementById('summary-inventory').textContent = totalStock;
+
+      // Payroll: use total payroll due today
+      const payrollDueEl = document.getElementById('payroll-due');
+      document.getElementById('summary-payroll').textContent = payrollDueEl ? payrollDueEl.textContent : 'PHP 0.00';
+
+      // Income/Expense: use net profit today
+      let netProfitToday = 0;
+      if (typeof getIncomeExpenseTodayNetProfit === 'function') {
+        netProfitToday = getIncomeExpenseTodayNetProfit();
+      }
+      document.getElementById('summary-income-expense').textContent = `₱${netProfitToday.toFixed(2)}`;
+    }
+
+    // Initialize with login
+    setPage('home');
+  </script>
+
+  <!-- Include page-specific JS files -->
+  <script src="inventory.js"></script>
+  <script src="payroll.js"></script>
+  <script src="financial.js"></script>
+</body>
+</html>
